@@ -1,0 +1,102 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company:
+// Engineer:
+//
+// Create Date: 2018/03/20 21:26:21
+// Design Name:
+// Module Name: psk_baseband
+// Project Name:
+// Target Devices:
+// Tool Versions:
+// Description:
+//
+// Dependencies:
+//
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+//
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module simple_frame_uart (
+	input         fpga_pl_50m,
+	//uart
+	input         pl_uart_rx ,
+	output        pl_uart_tx ,
+  //test led
+	output        led0       ,
+	output        led1
+);
+
+	assign led0 = pl_uart_rx;
+	assign led1 = pl_uart_tx;
+
+	wire clk_1k ;
+	wire clk_40m;
+
+	wire clk_4m ;
+  
+  //clk gen
+	clk_gen i_clk_gen (
+		.fpga_pl_50m(fpga_pl_50m),
+		.clk_40m    (clk_40m    ),
+		.clk_4m     (clk_4m     ),
+		.clk_1k     (clk_1k     )
+	);
+
+	wire       send_fifo_empty;
+	wire       send_fifo_full ;
+	wire [7:0] send_fifo_dout ;
+	wire       send_fifo_rd_en;
+
+	wire [7:0] rec_fifo_din  ;
+	wire       rec_fifo_wr_en;
+
+	wire [7:0] frame_dout ;
+	wire       frame_valid;
+
+	wire [7:0] pdout          ;
+	wire       pdoutvalid     ;
+	wire [7:0] real_data      ;
+	wire       real_data_valid;
+
+	toframe i_toframe (
+		.clk        (clk_1k         ),
+		.frame_dout (frame_dout     ),
+		.frame_valid(frame_valid    ),
+		.fifo_empty (send_fifo_empty),
+		.fifo_full  (send_fifo_full ),
+		.fifo_dout  (send_fifo_dout ),
+		.fifo_rd_en (send_fifo_rd_en)
+	);
+
+	wire [7:0] data_count;
+
+	deframe i_deframe (
+		.clk            (clk_1k       ),
+		.din            (frame_dout    ),
+		.din_valid      (frame_valid   ),
+		.real_data      (real_data      ),
+		.real_data_valid(real_data_valid),
+		.data_count     (data_count     )
+	);
+
+	uart_ctrl i_uart_ctrl (
+		.clk_1k         (clk_1k         ),
+		//.clk_40m        (clk_40m        ),
+		.clk_4m		(clk_4m),
+		//uart
+		.pl_uart_rx     (pl_uart_rx     ),
+		.pl_uart_tx     (pl_uart_tx     ),
+		//send fifo
+		.send_fifo_empty(send_fifo_empty),
+		.send_fifo_full (send_fifo_full ),
+		.send_fifo_dout (send_fifo_dout ),
+		.send_fifo_rd_en(send_fifo_rd_en),
+		//rec fifo
+		.rec_fifo_wr_en (real_data_valid),
+		.rec_fifo_din   (real_data      )
+	);
+endmodule
